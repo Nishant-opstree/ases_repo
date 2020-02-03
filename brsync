@@ -1,0 +1,39 @@
+#!/bin/bash
+declare -a latbar
+if [ ! -f newb ]
+then
+	mkdir bsync
+	touch bsync/newb
+	touch bsync/oldb
+	touch bsync/latb
+	git branch > bsync/oldb
+	sed -i 's|*| |' oldb
+else
+
+	#TO CHECK IF ANY NEW BRANCH IS ADDED TO LOCAL REPO OR NOT
+	git branch > bsync/newb
+	sed -i 's|*| |' bsync/newb
+	diff newb bsync/oldb > bsync/latb
+	latbar=($(cat bsync/latb | sed -n '2,$s|<   ||p' | awk '{print $1}'))
+	for ((i=0; i<"${#latbar[@]}"; i++)) 
+	do
+		git checkout "${latbar[$br]}"
+		git push origin "${latbar[$br]}"
+		git checkout master 
+	done
+	cat bsync/newb > bsync/oldb
+	
+	#TO CHECK IF ANY NEW BRANCH IS ADDED TO REMOTE REPO OR NOT
+	git fetch
+        git branch > bsync/newb
+        sed -i 's|*| |' bsync/newb
+        diff newb bsync/oldb > bsync/latb
+        latbar=($(cat bsync/latb | sed -n '2,$s|<   ||p' | awk '{print $1}'))
+        for ((i=0; i<"${#latbar[@]}"; i++))
+        do
+                git checkout "${latbar[$br]}"
+                git merge "${latbar[$br]}"
+                git checkout master
+        done
+        cat bsync/newb > bsync/oldb
+fi
