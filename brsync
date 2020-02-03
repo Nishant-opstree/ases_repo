@@ -1,25 +1,34 @@
 #!/bin/bash
 declare -a latbar
-if [ ! -f newb ]
+if [ ! -f bsync/newb ]
 then
 	mkdir bsync
 	touch bsync/newb
 	touch bsync/oldb
 	touch bsync/latb
 	git branch > bsync/oldb
-	sed -i 's|*| |' oldb
+	sed -i 's|*| |' bsync/oldb
 else
 
 	#TO CHECK IF ANY NEW BRANCH IS ADDED TO LOCAL REPO OR NOT
 	git branch > bsync/newb
 	sed -i 's|*| |' bsync/newb
-	diff newb bsync/oldb > bsync/latb
+	diff bsync/newb bsync/oldb > bsync/latb
 	latbar=($(cat bsync/latb | sed -n '2,$s|<   ||p' | awk '{print $1}'))
-	for ((i=0; i<"${#latbar[@]}"; i++)) 
+	for ((br=0; br<"${#latbar[@]}"; br++)) 
 	do
-		git checkout "${latbar[$br]}"
-		git push origin "${latbar[$br]}"
-		git checkout master 
+		if [ git branch | sed -n '/*/p' | awk '{print $2}'=='master' ]
+		then
+			git checkout "${latbar[$br]}"
+			git push origin "${latbar[$br]}"
+			git checkout master
+		else
+			git checkout master
+			git checkout "${latbar[$br]}"
+                        git push origin "${latbar[$br]}"
+                        git checkout master
+
+		fi 
 	done
 	cat bsync/newb > bsync/oldb
 	
@@ -27,13 +36,21 @@ else
 	git fetch
         git branch > bsync/newb
         sed -i 's|*| |' bsync/newb
-        diff newb bsync/oldb > bsync/latb
+        diff bsync/newb bsync/oldb > bsync/latb
         latbar=($(cat bsync/latb | sed -n '2,$s|<   ||p' | awk '{print $1}'))
-        for ((i=0; i<"${#latbar[@]}"; i++))
+        for ((br=0; br<"${#latbar[@]}"; br++))
         do
-                git checkout "${latbar[$br]}"
-                git merge "${latbar[$br]}"
-                git checkout master
+		if [ git branch | sed -n '/*/p' | awk '{print $2}'=='master' ]
+                then
+                        git checkout "${latbar[$br]}"
+                        git push origin "${latbar[$br]}"
+                        git checkout master
+                else
+			git checkout master
+	                git checkout "${latbar[$br]}"
+        	        git merge "${latbar[$br]}"
+                	git checkout master
+		fi
         done
         cat bsync/newb > bsync/oldb
 fi

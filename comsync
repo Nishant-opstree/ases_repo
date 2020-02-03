@@ -1,0 +1,52 @@
+#!/bin/bash
+declare -a latcar
+if [ ! -f csync/newc ]
+then
+	mkdir csync
+	touch csync/newc
+	touch csync/oldc
+	touch csync/latc
+	git log --oneline --all | awk '{print $1}' > csync/oldc
+else	
+	#TO CHECK FOR A NEW COMMIT IN ANY BRANCH IN LOCAL REPO
+	git log --oneline --all | awk '{print $1}' > csync/newc
+	diff csync/newc csync/oldc > csync/latc
+	latcar=($(cat csync/latc | sed -n '2,$s|<   ||p' | awk '{print $1}'))
+	for ((com=0;com<"${#latcar[@]}";com++))
+	do
+		br=($(git branch --contain "${latcar[$com]}" | awk '{print $1}'))
+		if [ git branch | sed -n '/*/p' | awk '{print $2}'=='master' ]
+                then
+			git checkout "$br"
+			git push "$br"
+			git checkout master
+		else
+			git checkout master
+			git checkout "$br"
+                        git push "$br"
+                        git checkout master
+		fi
+	done
+	cat csync/newc > csync/oldc
+
+	#TO CHECK FOR A NEW COMMIT IN ANY BRANCH IN REMOTE REPO
+	git fetch
+        git log --oneline --all | awk '{print $1}' > csync/newc
+        diff csync/newc csync/oldc > csync/latc
+        latcar=($(cat csync/latc | sed -n '2,$s|<   ||p' | awk '{print $1}'))
+        for ((com=0;com<"${#latcar[@]}";com++))
+        do
+                br=($(git branch --contain "${latcar[$com]}" | awk '{print $1}'))
+                if [ git branch | sed -n '/*/p' | awk '{print $2}'=='master' ]
+                then    
+                        git checkout "$br"
+                        git merge "$br"
+                        git checkout master
+                else
+                        git checkout master
+                        git checkout "$br"
+                        git merge "$br"
+                        git checkout master
+                fi
+        done
+fi
